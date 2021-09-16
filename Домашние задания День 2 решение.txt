@@ -1,0 +1,140 @@
+	Задачи День 2:
+
+1	Посчитайте общую сумму продаж в США в 1 квартале 2012 года? Решить 2-мя  способами Джойнами и Подзапросами 
+
+select sum(UnitPrice) from sales_items
+join sales on sales_items.SalesId = sales.SalesId
+where ShipCountry is 'USA' and SalesDate between date('2012-01-01') and date('2012-04-01')
+group by ShipCountry
+
+select sum(UnitPrice) 
+from sales_items
+where sales_items.SalesID in (
+select SalesID from sales as s1
+where ShipCountry is 'USA' and SalesDate between date('2012-01-01') and date('2012-04-01'))
+
+
+2	Покажите имена клиентов, которых нет среди работников.
+	Решить 3-мя способами: подзапросами, джойнами и логическим вычитанием.
+
+Подзапрос:
+select FirstName from customers
+where FirstName not in (
+select FirstName from employees)
+
+Джойн:
+select c.FirstName from customers as c
+left join employees as e on c.FirstName = e.FirstName
+where e.FirstName is null
+
+логическое вычитание:
+select firstname from customers
+except
+select firstname from employees
+
+3	Теоретический вопрос
+	Вернет ли данный запрос  одинаковый результат?  Да или НЕТ. 
+	Если  ДА. Объяснить почему.
+	Если НЕТ. Объяснить почему. Какой  запрос вернет больше строк ?
+
+ 	select *
+ 	from T1 LEFT JOIN T2
+		ON T1.column1=T2.column1
+	 where   T1.column1=0
+ 	
+	 select *
+	 from T1 LEFT JOIN T2
+		ON T1.column1=T2.column1 and   T1.column1=0
+
+4	Посчитайте количество треков в каждом альбоме. В результате должно быть:  имя альбома и кол-во треков.
+	Решить  2-мя способами: подзапросом и джойнами 
+
+select albums.Title, count(TrackID) from tracks
+left join albums on tracks.AlbumId = albums.AlbumId
+group by  albums.Title
+
+select albums.Title, (
+select count(TrackID)
+from tracks
+where tracks.albumID = albums.AlbumId
+group by tracks.AlbumID
+ ) from albums
+order by albums.Title
+
+
+5	Покажите фамилию и имя покупателей немцев сделавших заказы в 2009 году, товары которых были отгружены в город Берлин?
+
+select LastName, FirstName from customers
+where country is 'Germany' and customers.CustomerID in
+(select CustomerID from sales
+where strftime('%Y', SalesDate) = '2009' and shipCity is 'Berlin'
+)
+
+
+6	Покажите фамилии  клиентов которые  купили больше 30 музыкальных треков ?
+	Решить  задачу ,как минимум, 2-мя способами: джойнами и подзапросами
+
+select c.LastName, count(si.Quantity) as Q  from sales_items as si
+join sales as s 
+on si.salesID = s.salesID
+join customers as c on c.CustomerID = s.CustomerID
+group by c.customerID
+having Q>30
+order by Q desc
+
+select LastName, (
+select sum(Quantity) 
+from sales_items
+where sales_items.SalesID in (
+select SalesID from sales
+where sales.CustomerID = customers.CustomerId
+)
+) as S_Q
+from Customers
+where S_Q>30
+
+
+7	В базе есть таблица музыкальных треков и жанров Назовите среднюю стоимстость музыкального трека в каждом жанре?
+
+select genres.Name, avg(UnitPrice) from tracks
+left join genres on tracks.GenreId = genres.GenreId
+group by  genres.Name
+
+
+
+8	В базе есть таблица музыкальных треков и жанров. Покажите жанры у которых средняя стоимость одного трека больше 1-го рубля
+
+select genres.Name, avg(UnitPrice) as AVG from tracks
+left join genres on tracks.GenreId = genres.GenreId
+group by  genres.Name 
+having AVG>1/70
+
+
+/-----------
+
+
+SELECT matchid, teamid, player, gtime, id, mdate, stadium, team1, team2, 
+CASE WHEN teamid=team1 THEN '1' ELSE '0' END as score1,
+CASE WHEN teamid=team2 THEN '1' ELSE '0' END as score2
+
+FROM goal 
+JOIN game ON goal.matchid = game.id
+
+
+SELECT matchid, mdate, team1, 
+CASE WHEN teamid=team1 THEN '1' ELSE '0' END as score1,
+team2, 
+CASE WHEN teamid=team2 THEN '1' ELSE '0' END as score2
+
+FROM goal 
+JOIN game ON goal.matchid = game.id
+
+
+SELECT matchid, mdate, team1, 
+SUM(CASE WHEN teamid=team1 THEN '1' ELSE '0' END as score1),
+team2, 
+SUM(CASE WHEN teamid=team2 THEN '1' ELSE '0' END as score2)
+
+FROM goal 
+JOIN game ON goal.matchid = game.id
+GROUP BY matchid, mdate, team1, team2
